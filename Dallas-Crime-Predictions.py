@@ -16,9 +16,6 @@ from matplotlib import cm
 import geopandas as gpd
 import numpy as np
 
-from geopy.geocoders import Nominatim
-geolocator = Nominatim(user_agent="example app")
-
 from sklearn.model_selection import train_test_split
 
 print("Imports Loaded Successfully.")
@@ -54,6 +51,7 @@ data['Lat_and_Long'] = data['Location1'].str.extract(r'\(([^)]+)')
 # Now need to split into seperate columns and store in dataframe
 temp = data['Lat_and_Long'].str.strip('()').str.split(', ', expand=True).rename(columns={0:'Latitude', 1:'Longitude'}) 
 pd.concat([data, temp], axis=1)
+# To free up memory:
 del temp
 
 
