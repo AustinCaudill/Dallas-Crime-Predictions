@@ -13,10 +13,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib import cm
-import urllib.request
-import shutil
-import zipfile
-import re
 import geopandas as gpd
 import numpy as np
 
@@ -55,12 +51,10 @@ print('Number of duplicate records: %s'  % (data['Incident Number w/year'].dupli
 
 # Need to extract Lat and Long from column: Location1
 data['Lat_and_Long'] = data['Location1'].str.extract(r'\(([^)]+)')
-# Now need to split into seperate columns
-# data = data['Lat_and_Long'].str.strip('()').str.split(', ', expand=True).copy()
-data['lat','long'] = pd.DataFrame(data['Lat_and_Long'].str.strip('()').str.split(', ', expand=True)).copy()
-
-
-
+# Now need to split into seperate columns and store in dataframe
+temp = data['Lat_and_Long'].str.strip('()').str.split(', ', expand=True).rename(columns={0:'Latitude', 1:'Longitude'}) 
+pd.concat([data, temp], axis=1)
+del temp
 
 
 # Analyzing number of incidents per day
