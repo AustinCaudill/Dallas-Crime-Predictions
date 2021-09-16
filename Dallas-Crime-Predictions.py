@@ -13,7 +13,16 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib import cm
+import urllib.request
+import shutil
+import zipfile
+import re
+import geopandas as gpd
 import numpy as np
+
+from geopy.geocoders import Nominatim
+geolocator = Nominatim(user_agent="example app")
+
 from sklearn.model_selection import train_test_split
 
 print("Imports Loaded Successfully.")
@@ -35,8 +44,17 @@ print('First date: ', str(data.Date.describe(datetime_is_numeric=True)['min']))
 print('Last date: ', str(data.Date.describe(datetime_is_numeric=True)['max']))
 
 # Check for duplicate records.
-print('Number of duplicate records: %s'  % (data.duplicated().sum()))
-# There are no duplicates in this dataset.
+print('Number of duplicate records: %s'  % (data['Incident Number w/year'].duplicated().sum()))  # Someday should convert to ftsring format.
+# sorting by incident-year
+data.sort_values("Incident Number w/year", inplace = True)
+# dropping ALL duplicate values
+data.drop_duplicates(subset ="Incident Number w/year",
+                     keep = False, inplace = True)
+print('Number of duplicate records: %s'  % (data['Incident Number w/year'].duplicated().sum()))  # Check again
+# Duplicates have been removed.
+
+# Need to extract Lat and Long from column: Location1
+data['Lat'] = 
 
 
 
@@ -106,12 +124,8 @@ plt.show()
 
 
 
-
-
-
-
 # Split dataframe into train and test datasets.
-train, test = train_test_split(data, test_size=0.33, random_state=42)
+# train, test = train_test_split(data, test_size=0.33, random_state=42)
 
 
 
