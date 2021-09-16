@@ -54,7 +54,12 @@ print('Number of duplicate records: %s'  % (data['Incident Number w/year'].dupli
 # Duplicates have been removed.
 
 # Need to extract Lat and Long from column: Location1
-data['Lat'] = 
+data['Lat_and_Long'] = data['Location1'].str.extract(r'\(([^)]+)')
+# Now need to split into seperate columns
+# data = data['Lat_and_Long'].str.strip('()').str.split(', ', expand=True).copy()
+data['lat','long'] = pd.DataFrame(data['Lat_and_Long'].str.strip('()').str.split(', ', expand=True)).copy()
+
+
 
 
 
@@ -70,8 +75,7 @@ plt.annotate(
     xy=(dates.median(), 0.004),
     xytext=(200, 0.005),
     arrowprops=dict(arrowstyle='->', color=col[1], shrinkB=10))
-plt.title(
-    'Distribution of Number of Incidents per Day', fontdict={'fontsize': 16})
+plt.title('Distribution of Number of Incidents per Day', fontdict={'fontsize': 16})
 plt.xlabel('Incidents')
 plt.ylabel('Density')
 plt.show()
