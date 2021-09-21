@@ -1,6 +1,6 @@
 """ 
 Dallas Crime Predictions
-Sept 15th 2021
+Sept 21st 2021
 Austin Caudill
 
 """
@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import geopandas as gpd
 import numpy as np
-from pandas.core.arrays.integer import Int64Dtype
+import folium
+from folium import plugins
 
 from sklearn.model_selection import train_test_split
 
@@ -117,8 +118,8 @@ plt.title('Incidents per Crime Category', fontdict={'fontsize': 16})
 plt.xlabel('Incidents (%)')
 plt.show()
 
-
-# Mapping Lat and Long points
+# Need to remove missing location data at some point.
+# Mapping Lat and Long points - Not useful due to amnount of points plotted.
 long_min = -97.0690
 long_max = -96.4593
 lat_min = 33.0333
@@ -126,13 +127,61 @@ lat_max = 32.6006
 BBox = (long_min, long_max, lat_min, lat_max)
 Dallas_Map = plt.imread("Map_of_Dallas.png")
 fig, ax = plt.subplots(figsize = (8,7))
-data = data.astype({'Latitude': Int64Dtype, 'Longitude': Int64Dtype})
-ax.scatter(data['Latitude'], data['Longitude'], zorder=1, alpha= 0.2, c='b', s=10)
+data['Latitude'] = pd.to_numeric(data['Latitude'])
+data['Longitude'] = pd.to_numeric(data['Longitude'])
+ax.scatter(data['Longitude'], data['Latitude'], zorder=1, alpha= 0.2, c='b', s=10)
 ax.set_title('Plotting Spatial Data on Dallas Map')
 ax.set_xlim(BBox[0],BBox[1])
 ax.set_ylim(BBox[2],BBox[3])
 ax.imshow(Dallas_Map, zorder=0, extent = BBox, aspect= 'equal')
 
+# Heatmap by Lat/Long points
+heatmap_data = data[['Latitude', 'Longitude']].dropna()
+heatmap = folium.Map([32.7767, -96.7970], zoom_start=11)
+heatmap.add_child(plugins.HeatMap(heatmap_data, radius=15))
+display(heatmap)
+del heatmap_data
+
+# Heatmap by Zip Code
+# count number of incidences grouped by zipcode
+# Set zipcode type to string (folium)
+# data['Zip Code'] = data['Zip Code'].astype('str')
+# get the mean value across all data points
+zipcode_data = data.groupby('Zip Code').aggregate(np.mean)
+zipcode_data.reset_index(inplace = True)
+data['count'] = 1
+temp = data.groupby('Zip Code').sum()
+temp.reset_index(inplace = True)
+temp = temp[['Zip Code', 'count']]
+zipcode_data = pd.merge(zipcode_data, temp, on='Zip Code')
+# read updated geo data
+import urllib.request
+print('Beginning file download with urllib2...')
+url = 'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/tx_texas_zip_codes_geo.min.json'
+urllib.request.urlretrieve(url, 'zipcode.json')
+# load GeoJSON
+import simplejson as json
+# Get geo data file path
+with open('zipcode.json') as f:
+    txArea = json.load(f)
+geozips = []
+# zipcode_data['Zip Code'] = zipcode_data['Zip Code'].astype(np.int)
+# zipcode_data = zipcode_data.iloc[1: , :]
+for i in range(len(txArea['features'])):
+    if txArea['features'][i]['properties']['ZCTA5CE10'] in list(zipcode_data['Zip Code']):
+        geozips.append(txArea['features'][i])
+# creating new JSON object
+new_json = dict.fromkeys(['type','features'])
+new_json['type'] = 'FeatureCollection'
+new_json['features'] = geozips
+# save uodated JSON object
+open("cleaned_geodata.json", "w").write(json.dumps(new_json, sort_keys=True, indent=4, separators=(',', ': ')))
+laMap = folium.Map(location=[32.7767, -96.7970], zoom_start=11)
+#add the shape of LA County to the map
+folium.GeoJson(txArea).add_to(laMap)
+laMap.choropleth(geo_path=geozips, geo_data=zipcode_data, columns=['Zip Code', 'count'], \
+    key_on='features.properties.ZCTA5CE10', fill_color='YlGn', fill_opacity=1)
+display(laMap)
 
 # Split dataframe into train and test datasets.
 # train, test = train_test_split(data, test_size=0.33, random_state=42)
