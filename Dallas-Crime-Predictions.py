@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import geopandas as gpd
 import numpy as np
+from pandas.core.arrays.integer import Int64Dtype
 
 from sklearn.model_selection import train_test_split
 
@@ -50,7 +51,7 @@ print('Number of duplicate records: %s'  % (data['Incident Number w/year'].dupli
 data['Lat_and_Long'] = data['Location1'].str.extract(r'\(([^)]+)')
 # Now need to split into seperate columns and store in dataframe
 temp = data['Lat_and_Long'].str.strip('()').str.split(', ', expand=True).rename(columns={0:'Latitude', 1:'Longitude'}) 
-pd.concat([data, temp], axis=1)
+data = pd.concat([data, temp], axis=1)
 # To free up memory:
 del temp
 
@@ -117,7 +118,20 @@ plt.xlabel('Incidents (%)')
 plt.show()
 
 
-
+# Mapping Lat and Long points
+long_min = -97.0690
+long_max = -96.4593
+lat_min = 33.0333
+lat_max = 32.6006
+BBox = (long_min, long_max, lat_min, lat_max)
+Dallas_Map = plt.imread("Map_of_Dallas.png")
+fig, ax = plt.subplots(figsize = (8,7))
+data = data.astype({'Latitude': Int64Dtype, 'Longitude': Int64Dtype})
+ax.scatter(data['Latitude'], data['Longitude'], zorder=1, alpha= 0.2, c='b', s=10)
+ax.set_title('Plotting Spatial Data on Dallas Map')
+ax.set_xlim(BBox[0],BBox[1])
+ax.set_ylim(BBox[2],BBox[3])
+ax.imshow(Dallas_Map, zorder=0, extent = BBox, aspect= 'equal')
 
 
 # Split dataframe into train and test datasets.
