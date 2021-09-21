@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import geopandas as gpd
 import numpy as np
-import folium
-from folium import plugins
 
 from sklearn.model_selection import train_test_split
 
