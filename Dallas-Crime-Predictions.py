@@ -118,7 +118,6 @@ plt.title('Incidents per Crime Category', fontdict={'fontsize': 16})
 plt.xlabel('Incidents (%)')
 plt.show()
 
-# Need to remove missing location data at some point.
 # Mapping Lat and Long points - Not useful due to amnount of points plotted.
 long_min = -97.0690
 long_max = -96.4593
@@ -136,52 +135,36 @@ ax.set_ylim(BBox[2],BBox[3])
 ax.imshow(Dallas_Map, zorder=0, extent = BBox, aspect= 'equal')
 
 # Heatmap by Lat/Long points
+print('All Crime')
 heatmap_data = data[['Latitude', 'Longitude']].dropna()
 heatmap = folium.Map([32.7767, -96.7970], zoom_start=11)
 heatmap.add_child(plugins.HeatMap(heatmap_data, radius=15))
 display(heatmap)
-del heatmap_data
+del heatmap_data # To conserve resources
 
-# Heatmap by Zip Code
-# count number of incidences grouped by zipcode
-# Set zipcode type to string (folium)
-# data['Zip Code'] = data['Zip Code'].astype('str')
-# get the mean value across all data points
-zipcode_data = data.groupby('Zip Code').aggregate(np.mean)
-zipcode_data.reset_index(inplace = True)
-data['count'] = 1
-temp = data.groupby('Zip Code').sum()
-temp.reset_index(inplace = True)
-temp = temp[['Zip Code', 'count']]
-zipcode_data = pd.merge(zipcode_data, temp, on='Zip Code')
-# read updated geo data
-import urllib.request
-print('Beginning file download with urllib2...')
-url = 'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/tx_texas_zip_codes_geo.min.json'
-urllib.request.urlretrieve(url, 'zipcode.json')
-# load GeoJSON
-import simplejson as json
-# Get geo data file path
-with open('zipcode.json') as f:
-    txArea = json.load(f)
-geozips = []
-# zipcode_data['Zip Code'] = zipcode_data['Zip Code'].astype(np.int)
-# zipcode_data = zipcode_data.iloc[1: , :]
-for i in range(len(txArea['features'])):
-    if txArea['features'][i]['properties']['ZCTA5CE10'] in list(zipcode_data['Zip Code']):
-        geozips.append(txArea['features'][i])
-# creating new JSON object
-new_json = dict.fromkeys(['type','features'])
-new_json['type'] = 'FeatureCollection'
-new_json['features'] = geozips
-# save uodated JSON object
-open("cleaned_geodata.json", "w").write(json.dumps(new_json, sort_keys=True, indent=4, separators=(',', ': ')))
-laMap = folium.Map(location=[32.7767, -96.7970], zoom_start=11)
-#add the shape of LA County to the map
-folium.GeoJson(txArea).add_to(laMap)
-laMap.choropleth(geo_path=geozips, geo_data=zipcode_data, columns=['Zip Code', 'count'], \
-    key_on='features.properties.ZCTA5CE10', fill_color='YlGn', fill_opacity=1)
-display(laMap)
+##########################################
+# Geographic Density of Different Crimes
+crimes = data['NIBRS Crime Category'].unique().tolist()
+for i in crimes:
+    print(i)
+    heatmap_base = folium.Map([32.7767, -96.7970], zoom_start=11)
+    # Ensure you're handing it floats
+    data['Latitude'] = data['Latitude'].astype(float)
+    data['Longitude'] = data['Longitude'].astype(float)
+    # Filter the DF for rows, then columns, then remove NaNs
+    heat_df = data[['Latitude', 'Longitude', 'NIBRS Crime Category']]
+    heat_df = heat_df.dropna(axis=0, subset=['Latitude','Longitude'])
+    heat_df = heat_df.loc[heat_df['NIBRS Crime Category'] == i]
+    # List comprehension to make out list of lists
+    heat_data = [[row['Latitude'],row['Longitude']] for index, row in heat_df.iterrows()]
+    # Plot it on the map
+    heatmap_base.add_child(plugins.HeatMap(heat_data, radius=15))
+    # Display the map
+    display(heatmap_base)
+    print()
+
+##########################################
+
 
 # Split dataframe into train and test datasets.
 # train, test = train_test_split(data, test_size=0.33, random_state=42)
