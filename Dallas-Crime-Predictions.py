@@ -23,7 +23,7 @@ from sklearn.model_selection import train_test_split
 print("Imports Loaded Successfully.")
 # ===============================
 
-data = pd.read_csv("Police_Incidents.csv", parse_dates=['Date1 of Occurrence', 'Year1 of Occurrence'])
+data = pd.read_csv("Police_Incidents.csv", parse_dates=['Time1 of Occurrence', 'Date1 of Occurrence', 'Year1 of Occurrence'])
 # Columns 3, 41, 52, 57, 60, 74 have mixed data types. Examine.
 # print(data.iloc[:, [3, 3]])
 
@@ -164,6 +164,22 @@ for i in crimes:
     print()
 
 ##########################################
+data['Hour'] = data['Time1 of Occurrence'].dt.hour
+data3 = data.groupby(['Time1 of Occurrence', 'Date', 'NIBRS Crime Category'],
+                     as_index=False).count().iloc[:, 4]
+data3.rename(columns={'Date': 'Incidents'}, inplace=True)
+data3 = data3.groupby(['Time1 of Occurrence', 'NIBRS Crime Category'], as_index=False).mean()
+data3 = data3.loc[data3['NIBRS Crime Category'].isin(
+    ['Larceny', 'GAMBLING', 'BURGLARY', 'ARSON', 'PROSTITUTION'])]
+sns.set_style("whitegrid")
+fig, ax = plt.subplots(figsize=(14, 4))
+ax = sns.lineplot(x='Time1 of Occurrence', y='Incidents', data=data3, hue='Category')
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=6)
+plt.suptitle('Average number of incidents per hour')
+fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+
+
 
 
 # Split dataframe into train and test datasets.
