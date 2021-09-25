@@ -165,15 +165,15 @@ for i in crimes:
 
 ##########################################
 data['Hour'] = data['Time1 of Occurrence'].dt.hour
-data3 = data.groupby(['Time1 of Occurrence', 'Date', 'NIBRS Crime Category'],
+data3 = data.groupby(['Hour', 'Date', 'NIBRS Crime Category'],
                      as_index=False).count().iloc[:, 4]
 data3.rename(columns={'Date': 'Incidents'}, inplace=True)
-data3 = data3.groupby(['Time1 of Occurrence', 'NIBRS Crime Category'], as_index=False).mean()
+data3 = data3.groupby(['Hour', 'NIBRS Crime Category'], as_index=False).mean()
 data3 = data3.loc[data3['NIBRS Crime Category'].isin(
     ['Larceny', 'GAMBLING', 'BURGLARY', 'ARSON', 'PROSTITUTION'])]
 sns.set_style("whitegrid")
 fig, ax = plt.subplots(figsize=(14, 4))
-ax = sns.lineplot(x='Time1 of Occurrence', y='Incidents', data=data3, hue='Category')
+ax = sns.lineplot(x='Hour', y='Incidents', data=data3, hue='Category')
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=6)
 plt.suptitle('Average number of incidents per hour')
 fig.tight_layout(rect=[0, 0.03, 1, 0.95])
