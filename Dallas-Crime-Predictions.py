@@ -1,6 +1,6 @@
 """ 
 Dallas Crime Predictions
-Sept 23rd 2021
+Sept 27th 2021
 Austin Caudill
 
 """
@@ -17,6 +17,10 @@ import geopandas as gpd
 import numpy as np
 import folium
 from folium import plugins
+import lightgbm as lgb
+import eli5
+from eli5.sklearn import PermutationImportance
+from lightgbm import LGBMClassifier
 
 from sklearn.model_selection import train_test_split
 
@@ -165,25 +169,56 @@ for i in crimes:
 
 ##########################################
 data['Hour'] = data['Time1 of Occurrence'].dt.hour
-data3 = data.groupby(['Hour', 'Date', 'NIBRS Crime Category'],
-                     as_index=False).count().iloc[:, 4]
-data3.rename(columns={'Date': 'Incidents'}, inplace=True)
+data3 = data.groupby(['Hour', 'Date', 'NIBRS Crime Category'], as_index=False).count().iloc[:,:4]
+data3.rename(columns={'Incident Number w/year': 'Incidents'}, inplace=True)
 data3 = data3.groupby(['Hour', 'NIBRS Crime Category'], as_index=False).mean()
 data3 = data3.loc[data3['NIBRS Crime Category'].isin(
-    ['Larceny', 'GAMBLING', 'BURGLARY', 'ARSON', 'PROSTITUTION'])]
+   ['LARCENY/ THEFT OFFENSES', 'DESTRUCTION/ DAMAGE/ VANDALISM OF PROPERTY', 'ASSAULT OFFENSES', 'BURGLARY/ BREAKING & ENTERING', 'PUBLIC INTOXICATION'])]
 sns.set_style("whitegrid")
-fig, ax = plt.subplots(figsize=(14, 4))
-ax = sns.lineplot(x='Hour', y='Incidents', data=data3, hue='Category')
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=6)
+fig, ax = plt.subplots(figsize=(14, 8))
+ax = sns.lineplot(x='Hour', y='Incidents', data=data3, hue='NIBRS Crime Category')
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=5)
 plt.suptitle('Average number of incidents per hour')
+plt.xticks(range(0, 24))
 fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.show()
 
-
-
-
+### Machine Learning Time ###
+# Drop unneeded columns
+# data.drop(columns=['Incident Number w/year', 'Service Number ID', 'Call (911) Problem', 'Incident Address', 'Apartment Number', 'Target Area Action Grids', 'Community', 'Date of Report', 'Date incident created', 'Offense Entered Month', 'Offense Entered Day of the Week', 'Offense Entered Time', 'CFS Number', 'Call Received Date Time', 'Call Date Time', 'Call Cleared Date Time', 'Call Dispatch Date Time', 'Special Report (Pre-RMS)', 'Person Involvement Type', 'Victim Type', 'Victim Name', 'Victim Race', 'Victim Ethnicity', 'Victim Gender', 'Victim Home Address', 'Victim Apartment', 'Victim Zip Code', 'Victim City', 'Victim State', 'Victim Business Name', 'Victim Business Address', 'Victim Business Phone', 'Responding Officer #1  Badge No', 'Responding Officer #1  Name', 'Responding Officer #2 Badge No', 'Responding Officer #2  Name', 'Reporting Officer Badge No', 'Assisting Officer Badge No', 'Reviewing Officer Badge No', 'Element Number Assigned', 'Investigating Unit 1', 'Investigating Unit 2', 'Offense Status', 'UCR Disposition', 'Victim Injury Description', 'Victim Condition', 'Hate Crime Description', 'Drug Related Istevencident', 'RMS Code', 'Penal Code', 'UCR Offense Name', 'UCR Offense Description', 'Update Date', 'Lat_and_Long'], axis=1, inplace=True)
+newdata = data[['Hour','Division','NIBRS Crime Category','Year of Incident','Beat']].copy()
+#data.drop(columns=['Watch', 'Type of Incident', 'Type  Location', 'Type of Property', 'Council District', 'Date', 'Year', 'Month1 of Occurence', 'Day1 of the Week', 'Time1 of Occurrence', 'Month2 of Occurence', 'Day2 of the Week', 'Time2 of Occurrence', 'Modus Operandi (MO)', 'Family Offense', 'Hate Crime', 'Weapon Used', 'Gang Related Offense', 'Offense Type', 'NIBRS Crime', 'NIBRS Crime Against', 'NIBRS Code', 'NIBRS Group', 'NIBRS Type', 'City', 'State', 'Location1'], axis=1, inplace=True)
 # Split dataframe into train and test datasets.
-# train, test = train_test_split(data, test_size=0.33, random_state=42)
+train, test = train_test_split(newdata, test_size=0.33, random_state=42)
+# feature selection
+from sklearn.preprocessing import LabelEncoder
+# Encoding the Categorical Variables
+le1 = LabelEncoder()
+train['Division'] = le1.fit_transform(train['Division'])
+test['Division'] = le1.transform(test['Division'])
+le2 = LabelEncoder()
+y = le2.fit_transform(train.pop('NIBRS Crime Category'))
+
+train_X, val_X, train_y, val_y = train_test_split(train, y)
+
+model =LGBMClassifier(objective='multiclass', num_class=39).fit(train_X, train_y)
+
+perm = PermutationImportance(model).fit(val_X, val_y)
+print(eli5.show_weights(perm, feature_names=val_X.columns.tolist()))
+
+# Creating the model
+y_pred=model.predict(val_X)
+# view accuracy
+from sklearn.metrics import accuracy_score
+accuracy=accuracy_score(y_pred, val_y)
+print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(val_y, y_pred)))
+
+
+
+
+
+
+
 
 
 
