@@ -21,6 +21,8 @@ import lightgbm as lgb
 import eli5
 from eli5.sklearn import PermutationImportance
 from lightgbm import LGBMClassifier
+from pdpbox import pdp, get_dataset, info_plots
+import shap
 
 from sklearn.model_selection import train_test_split
 
@@ -185,9 +187,7 @@ plt.show()
 
 ### Machine Learning Time ###
 # Drop unneeded columns
-# data.drop(columns=['Incident Number w/year', 'Service Number ID', 'Call (911) Problem', 'Incident Address', 'Apartment Number', 'Target Area Action Grids', 'Community', 'Date of Report', 'Date incident created', 'Offense Entered Month', 'Offense Entered Day of the Week', 'Offense Entered Time', 'CFS Number', 'Call Received Date Time', 'Call Date Time', 'Call Cleared Date Time', 'Call Dispatch Date Time', 'Special Report (Pre-RMS)', 'Person Involvement Type', 'Victim Type', 'Victim Name', 'Victim Race', 'Victim Ethnicity', 'Victim Gender', 'Victim Home Address', 'Victim Apartment', 'Victim Zip Code', 'Victim City', 'Victim State', 'Victim Business Name', 'Victim Business Address', 'Victim Business Phone', 'Responding Officer #1  Badge No', 'Responding Officer #1  Name', 'Responding Officer #2 Badge No', 'Responding Officer #2  Name', 'Reporting Officer Badge No', 'Assisting Officer Badge No', 'Reviewing Officer Badge No', 'Element Number Assigned', 'Investigating Unit 1', 'Investigating Unit 2', 'Offense Status', 'UCR Disposition', 'Victim Injury Description', 'Victim Condition', 'Hate Crime Description', 'Drug Related Istevencident', 'RMS Code', 'Penal Code', 'UCR Offense Name', 'UCR Offense Description', 'Update Date', 'Lat_and_Long'], axis=1, inplace=True)
 newdata = data[['Hour','Division','NIBRS Crime Category','Year of Incident','Beat']].copy()
-#data.drop(columns=['Watch', 'Type of Incident', 'Type  Location', 'Type of Property', 'Council District', 'Date', 'Year', 'Month1 of Occurence', 'Day1 of the Week', 'Time1 of Occurrence', 'Month2 of Occurence', 'Day2 of the Week', 'Time2 of Occurrence', 'Modus Operandi (MO)', 'Family Offense', 'Hate Crime', 'Weapon Used', 'Gang Related Offense', 'Offense Type', 'NIBRS Crime', 'NIBRS Crime Against', 'NIBRS Code', 'NIBRS Group', 'NIBRS Type', 'City', 'State', 'Location1'], axis=1, inplace=True)
 # Split dataframe into train and test datasets.
 train, test = train_test_split(newdata, test_size=0.33, random_state=42)
 # feature selection
@@ -197,9 +197,13 @@ le1 = LabelEncoder()
 train['Division'] = le1.fit_transform(train['Division'])
 test['Division'] = le1.transform(test['Division'])
 le2 = LabelEncoder()
-y = le2.fit_transform(train.pop('NIBRS Crime Category'))
+X = train.drop(columns=['NIBRS Crime Category'])
+y = le2.fit_transform(train['NIBRS Crime Category'])
+le3 = LabelEncoder()
+train['NIBRS Crime Category'] = le3.fit_transform(train['NIBRS Crime Category'])
+test['NIBRS Crime Category'] = le3.transform(test['NIBRS Crime Category'])
 
-train_X, val_X, train_y, val_y = train_test_split(train, y)
+train_X, val_X, train_y, val_y = train_test_split(X, y)
 
 model =LGBMClassifier(objective='multiclass', num_class=39).fit(train_X, train_y)
 
@@ -213,13 +217,33 @@ from sklearn.metrics import accuracy_score
 accuracy=accuracy_score(y_pred, val_y)
 print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(val_y, y_pred)))
 
+pdp_Pd = pdp.pdp_isolate(
+    model=model,
+    dataset=X,
+    model_features=X.columns.tolist(),
+    feature='Hour',
+    n_jobs=-1)
 
+pdp.pdp_plot(
+    pdp_Pd,
+    'Hour',
+    ncols=3)
+plt.show()
 
+model = LGBMClassifier().fit(X, y, categorical_feature=['Division'])
+# Test it out
+data_for_prediction = test.loc[[1352]]
+print(data_for_prediction)
 
+shap.initjs()
 
+# Create object that can calculate shap values
+explainer = shap.TreeExplainer(model)
 
+# Calculate Shap values
+shap_values = explainer.shap_values(data_for_prediction)
 
-
+shap.force_plot(explainer.expected_value[4], shap_values[4], data_for_prediction, link='logit')
 
 
 # ===============================
