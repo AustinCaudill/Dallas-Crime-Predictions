@@ -1,6 +1,6 @@
 """ 
 Dallas Crime Predictions
-Sept 27th 2021
+Sept 28th 2021
 Austin Caudill
 
 """
@@ -17,13 +17,13 @@ import geopandas as gpd
 import numpy as np
 import folium
 from folium import plugins
-import lightgbm as lgb
+import lightgbm as lgbm
 import eli5
 from eli5.sklearn import PermutationImportance
 from lightgbm import LGBMClassifier
 from pdpbox import pdp, get_dataset, info_plots
 import shap
-
+from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
 print("Imports Loaded Successfully.")
@@ -188,30 +188,60 @@ plt.show()
 ### Machine Learning Time ###
 # Drop unneeded columns
 newdata = data[['Hour','Division','NIBRS Crime Category','Year of Incident','Beat']].copy()
+index_with_nan = newdata.index[newdata.isnull().any(axis=1)]
+newdata.drop(index_with_nan,0, inplace=True)
+
 # Split dataframe into train and test datasets.
 train, test = train_test_split(newdata, test_size=0.33, random_state=42)
-# feature selection
-from sklearn.preprocessing import LabelEncoder
-# Encoding the Categorical Variables
-le1 = LabelEncoder()
-train['Division'] = le1.fit_transform(train['Division'])
-test['Division'] = le1.transform(test['Division'])
+
+# Seperate the target (`y`) from the training features (`features`).
+
+# Separate target from features
+y = train['NIBRS Crime Category']
+features = train.drop(['NIBRS Crime Category'], axis=1)
+
+# List of features for later use
+feature_list = list(features.columns)
+
+# Preview features
+features.head()
+
+# label-encode categorical columns
+X = features.copy()
+X_test = test.copy()
+
+# Need to Label Encode
+labelencoder = LabelEncoder()
+X['Division'] = labelencoder.fit_transform(features['Division'])
+X_test['Division'] = labelencoder.transform(test['Division'])
+
 le2 = LabelEncoder()
-X = train.drop(columns=['NIBRS Crime Category'])
-y = le2.fit_transform(train['NIBRS Crime Category'])
-le3 = LabelEncoder()
-train['NIBRS Crime Category'] = le3.fit_transform(train['NIBRS Crime Category'])
-test['NIBRS Crime Category'] = le3.transform(test['NIBRS Crime Category'])
+y= le2.fit_transform(train['NIBRS Crime Category'])
 
-train_X, val_X, train_y, val_y = train_test_split(X, y)
+print(X.head())
 
-model =LGBMClassifier(objective='multiclass', num_class=39).fit(train_X, train_y)
+# Split validation set from the training data.
+X_train, X_valid, y_train, y_valid = train_test_split(X, y, random_state=1)
+
+model = LGBMClassifier() 
+
+# Train the model
+train_data = lgbm.Dataset(X,label=y, categorical_feature=['Division'])
+model.fit(X_train,y_train)
+preds_valid = model.predict(X_valid)
+
+# Make predictions on entire data set.
+predictions = model.predict(X_test)
 
 perm = PermutationImportance(model).fit(val_X, val_y)
 print(eli5.show_weights(perm, feature_names=val_X.columns.tolist()))
 
 # Creating the model
 y_pred=model.predict(val_X)
+
+
+
+
 # view accuracy
 from sklearn.metrics import accuracy_score
 accuracy=accuracy_score(y_pred, val_y)
@@ -229,6 +259,9 @@ pdp.pdp_plot(
     'Hour',
     ncols=3)
 plt.show()
+
+
+
 
 model = LGBMClassifier().fit(X, y, categorical_feature=['Division'])
 # Test it out
