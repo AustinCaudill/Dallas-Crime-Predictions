@@ -33,6 +33,8 @@ data = pd.read_csv("Police_Incidents.csv", parse_dates=['Time1 of Occurrence', '
 # Columns 3, 41, 52, 57, 60, 74 have mixed data types. Examine.
 # print(data.iloc[:, [3, 3]])
 
+
+
 # Rename columns for ease of use.
 data.rename(columns={'Date1 of Occurrence': 'Date'}, inplace=True)
 data.rename(columns={'Year1 of Occurrence': 'Year'}, inplace=True)
@@ -97,8 +99,7 @@ plt.show()
 
 
 byday = data.groupby('Day1 of the Week').count().iloc[:, 0]
-byday = byday.reindex([
-    'Sun','Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
+byday = byday.reindex(['Sun','Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
 plt.figure(figsize=(10, 5))
 with sns.axes_style("whitegrid"):
     ax = sns.barplot(
@@ -187,9 +188,13 @@ plt.show()
 
 ### Machine Learning Time ###
 # Drop unneeded columns
-newdata = data[['Hour','Division','NIBRS Crime Category','Year of Incident','Beat']].copy()
+newdata = data[['Hour','Division','NIBRS Crime Category','Year of Incident','Day1 of the Year','Watch','Beat','Latitude','Longitude']].copy()
+newdata = newdata[newdata.Watch != 'U']
 index_with_nan = newdata.index[newdata.isnull().any(axis=1)]
 newdata.drop(index_with_nan,0, inplace=True)
+newdata['Watch'].astype(str).astype(int)
+# Works up to here.
+
 
 # Split dataframe into train and test datasets.
 train, test = train_test_split(newdata, test_size=0.33, random_state=42)
@@ -214,6 +219,7 @@ X_test = test.copy()
 labelencoder = LabelEncoder()
 X['Division'] = labelencoder.fit_transform(features['Division'])
 X_test['Division'] = labelencoder.transform(test['Division'])
+X_test = X_test.drop(['NIBRS Crime Category'], axis=1)
 
 le2 = LabelEncoder()
 y= le2.fit_transform(train['NIBRS Crime Category'])
@@ -233,19 +239,19 @@ preds_valid = model.predict(X_valid)
 # Make predictions on entire data set.
 predictions = model.predict(X_test)
 
-perm = PermutationImportance(model).fit(val_X, val_y)
-print(eli5.show_weights(perm, feature_names=val_X.columns.tolist()))
+perm = PermutationImportance(model).fit(X_valid, y_valid)
+eli5.show_weights(perm, feature_names=X_test.columns.tolist())
 
 # Creating the model
-y_pred=model.predict(val_X)
+y_pred=model.predict(X_valid)
 
 
 
 
 # view accuracy
 from sklearn.metrics import accuracy_score
-accuracy=accuracy_score(y_pred, val_y)
-print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(val_y, y_pred)))
+accuracy=accuracy_score(y_pred, y_valid)
+print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(y_valid, y_pred)))
 
 pdp_Pd = pdp.pdp_isolate(
     model=model,
@@ -263,9 +269,9 @@ plt.show()
 
 
 
-model = LGBMClassifier().fit(X, y, categorical_feature=['Division'])
+model = LGBMClassifier().fit(X_valid, y_valid, categorical_feature=['Division'])
 # Test it out
-data_for_prediction = test.loc[[1352]]
+data_for_prediction = X_test.loc[[1352]]
 print(data_for_prediction)
 
 shap.initjs()
@@ -276,7 +282,7 @@ explainer = shap.TreeExplainer(model)
 # Calculate Shap values
 shap_values = explainer.shap_values(data_for_prediction)
 
-shap.force_plot(explainer.expected_value[4], shap_values[4], data_for_prediction, link='logit')
+shap.force_plot(explainer.expected_value[6], shap_values[6], data_for_prediction, link='logit')
 
 
 # ===============================
