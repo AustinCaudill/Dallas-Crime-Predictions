@@ -191,73 +191,55 @@ plt.xticks(range(0, 24))
 fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.show()
 
-### Machine Learning Time ###
+### Machine Learning ###
 # Keep only needed columns
 newdata = data[['Month','Minute','Hour','Division','NIBRS Crime Category','Year of Incident','Day1 of the Year','Watch','Beat','Latitude','Longitude','Zip Code']].copy()
 newdata = newdata[newdata.Watch != 'U']
 newdata['Watch'].dropna(inplace=True)
 newdata['Watch'] = newdata['Watch'].astype(str).astype(int)
 
-# Split dataframe into train and test datasets.
-train, test = train_test_split(newdata, test_size=0.33, random_state=42)
-# Seperate the target (`y`) from the training features (`features`).
-
-# Separate target from features
-y = train['NIBRS Crime Category']
-features = train.drop(['NIBRS Crime Category'], axis=1)
+# Seperate the target (`y`) from the features (`features`).
+y = newdata['NIBRS Crime Category']
+features = newdata.drop(['NIBRS Crime Category'], axis=1)
 
 # List of features for later use
 feature_list = list(features.columns)
 
-# Preview features
-features.head()
-
 # label-encode categorical columns
 X = features.copy()
-X_test = test.copy()
 
 # Need to Label Encode
 labelencoder = LabelEncoder()
 X['Division'] = labelencoder.fit_transform(features['Division'])
-X_test['Division'] = labelencoder.transform(test['Division'])
-X_test = X_test.drop(['NIBRS Crime Category'], axis=1)
 
 le2 = LabelEncoder()
-y= le2.fit_transform(train['NIBRS Crime Category'])
+y= le2.fit_transform(newdata['NIBRS Crime Category'])
 # Need key for later reference - Note: These are listed alphabetically.
 print(dict(zip(le2.classes_,range(len(le2.classes_)))))
 
+# Split test set from the training data.
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=1)
 
-# Split validation set from the training data.
-X_train, X_valid, y_train, y_valid = train_test_split(X, y, random_state=1)
-
-model = LGBMClassifier() 
+model = LGBMClassifier() # Need model parameters?
 
 # Train the model
 model.fit(X_train,y_train)
-preds_valid = model.predict(X_valid)
 
 # Make predictions on entire data set.
-predictions = model.predict(X_test)
+y_pred = model.predict(X_test)
 
-perm = PermutationImportance(model).fit(X_valid, y_valid)
-eli5.show_weights(perm, feature_names=X_test.columns.tolist())
-
-# Creating the model
-y_pred=model.predict(X_valid)
-
-
-
+perm = PermutationImportance(model).fit(X_test, y_test)
+display(eli5.show_weights(perm, feature_names=X_test.columns.tolist()))
 
 # view accuracy
 from sklearn.metrics import accuracy_score
-accuracy=accuracy_score(y_pred, y_valid)
-print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(y_valid, y_pred)))
+accuracy=accuracy_score(y_pred, y_test)
+print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(y_test, y_pred)))
 
-model = LGBMClassifier().fit(X, y, categorical_feature=['Division'])
+model2 = model.fit(X, y, categorical_feature=['Division'])
 
 pdp_Pd = pdp.pdp_isolate(
-    model=model,
+    model=model2,
     dataset=X,
     model_features=X.columns.tolist(),
     feature='Hour',
@@ -272,7 +254,7 @@ plt.show()
 
 
 # Test it out
-data_for_prediction = X_test.loc[[96623]]
+data_for_prediction = X_test.loc[[210339]]
 print(data_for_prediction)
 
 shap.initjs()
@@ -283,7 +265,7 @@ explainer = shap.TreeExplainer(model)
 # Calculate Shap values
 shap_values = explainer.shap_values(data_for_prediction)
 
-shap.force_plot(explainer.expected_value[6], shap_values[5], data_for_prediction, link='logit')
+display(shap.force_plot(explainer.expected_value[11], shap_values[11], data_for_prediction, link='logit'))
 
 
 # ===============================
