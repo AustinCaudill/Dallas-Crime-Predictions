@@ -190,15 +190,12 @@ plt.show()
 # Drop unneeded columns
 newdata = data[['Hour','Division','NIBRS Crime Category','Year of Incident','Day1 of the Year','Watch','Beat','Latitude','Longitude']].copy()
 newdata = newdata[newdata.Watch != 'U']
-index_with_nan = newdata.index[newdata.isnull().any(axis=1)]
-newdata.drop(index_with_nan,0, inplace=True)
-newdata['Watch'].astype(str).astype(int)
-# Works up to here.
-
+newdata['Watch'].dropna(inplace=True)
+newdata['Watch'] = newdata['Watch'].astype(str).astype(int)
 
 # Split dataframe into train and test datasets.
 train, test = train_test_split(newdata, test_size=0.33, random_state=42)
-
+print(newdata['Watch'].dtype)
 # Seperate the target (`y`) from the training features (`features`).
 
 # Separate target from features
@@ -267,11 +264,9 @@ pdp.pdp_plot(
 plt.show()
 
 
-
-
 model = LGBMClassifier().fit(X_valid, y_valid, categorical_feature=['Division'])
 # Test it out
-data_for_prediction = X_test.loc[[1352]]
+data_for_prediction = X_test.loc[[96623]]
 print(data_for_prediction)
 
 shap.initjs()
