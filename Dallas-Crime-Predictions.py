@@ -195,7 +195,6 @@ newdata['Watch'] = newdata['Watch'].astype(str).astype(int)
 
 # Split dataframe into train and test datasets.
 train, test = train_test_split(newdata, test_size=0.33, random_state=42)
-print(newdata['Watch'].dtype)
 # Seperate the target (`y`) from the training features (`features`).
 
 # Separate target from features
@@ -220,8 +219,9 @@ X_test = X_test.drop(['NIBRS Crime Category'], axis=1)
 
 le2 = LabelEncoder()
 y= le2.fit_transform(train['NIBRS Crime Category'])
+# Need key for later reference
+print(dict(zip(le2.classes_,range(len(le2.classes_)))))
 
-print(X.head())
 
 # Split validation set from the training data.
 X_train, X_valid, y_train, y_valid = train_test_split(X, y, random_state=1)
