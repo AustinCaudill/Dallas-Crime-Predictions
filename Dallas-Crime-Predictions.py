@@ -1,10 +1,10 @@
 """ 
 Dallas Crime Predictions
-Sept 28th 2021
+Sept 29th 2021
 Austin Caudill
 
 """
-
+########## Begin Imports ##########
 # Begin Timer for script
 import time
 start_time = time.time()
@@ -25,15 +25,13 @@ from pdpbox import pdp, get_dataset, info_plots
 import shap
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 print("Imports Loaded Successfully.")
-# ===============================
+########## END Impots ##########
 
+########## Read-In Data & Process ##########
 data = pd.read_csv("Police_Incidents.csv", parse_dates=['Time1 of Occurrence', 'Date1 of Occurrence', 'Year1 of Occurrence'])
-# Columns 3, 41, 52, 57, 60, 74 have mixed data types. Examine.
-# print(data.iloc[:, [3, 3]])
-
-
 
 # Rename columns for ease of use.
 data.rename(columns={'Date1 of Occurrence': 'Date'}, inplace=True)
@@ -64,7 +62,7 @@ data = pd.concat([data, temp], axis=1)
 # To free up memory:
 del temp
 
-
+########## Data Analysis Plots ##########
 # Analyzing number of incidents per day
 col = sns.color_palette()
 
@@ -125,7 +123,7 @@ plt.title('Incidents per Crime Category', fontdict={'fontsize': 16})
 plt.xlabel('Incidents (%)')
 plt.show()
 
-# Mapping Lat and Long points - Not useful due to amnount of points plotted.
+# Mapping Lat and Long points - Not useful due to amount of points plotted.
 long_min = -97.0690
 long_max = -96.4593
 lat_min = 33.0333
@@ -170,12 +168,15 @@ for i in crimes:
     print()
 
 ##########################################
+########## END Data Analysis Plots ##########
+
 data['Time for Hour'] = data['Time1 of Occurrence'].copy()
 data['Hour'] = data['Time for Hour'].dt.hour
 data['Time for Min'] = data['Time1 of Occurrence'].copy()
 data['Minute'] = data['Time for Min'].dt.minute
 data['Time for Mon'] = data['Date'].copy()
 data['Month'] = data['Time for Mon'].dt.month
+data.drop(columns=['Time for Hour', 'Time for Min', 'Time for Mon']) # These are no longer needed.
 
 data3 = data.groupby(['Hour', 'Date', 'NIBRS Crime Category'], as_index=False).count().iloc[:,:4]
 data3.rename(columns={'Incident Number w/year': 'Incidents'}, inplace=True)
@@ -208,10 +209,9 @@ feature_list = list(features.columns)
 # label-encode categorical columns
 X = features.copy()
 
-# Need to Label Encode
+# Label Encode categorical variables
 labelencoder = LabelEncoder()
 X['Division'] = labelencoder.fit_transform(features['Division'])
-
 le2 = LabelEncoder()
 y= le2.fit_transform(newdata['NIBRS Crime Category'])
 # Need key for later reference - Note: These are listed alphabetically.
@@ -228,23 +228,22 @@ model.fit(X_train,y_train)
 # Make predictions on entire data set.
 y_pred = model.predict(X_test)
 
+# Determine importance of features used in model.
 perm = PermutationImportance(model).fit(X_test, y_test)
 display(eli5.show_weights(perm, feature_names=X_test.columns.tolist()))
 
-# view accuracy
-from sklearn.metrics import accuracy_score
+# Determine model accuracy
 accuracy=accuracy_score(y_pred, y_test)
 print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(y_test, y_pred)))
 
+# Create Partial Dependence Plots - Reference dictionary above for classes.
 model2 = model.fit(X, y, categorical_feature=['Division'])
-
 pdp_Pd = pdp.pdp_isolate(
     model=model2,
     dataset=X,
     model_features=X.columns.tolist(),
     feature='Hour',
     n_jobs=-1)
-
 pdp.pdp_plot(
     pdp_Pd,
     'Hour',
@@ -253,11 +252,11 @@ plt.show()
 
 
 
-# Test it out
+""" # Test it out
 data_for_prediction = X_test.loc[[210339]]
-print(data_for_prediction)
+print(data_for_prediction) """
 
-shap.initjs()
+""" shap.initjs()
 
 # Create object that can calculate shap values
 explainer = shap.TreeExplainer(model)
@@ -265,9 +264,11 @@ explainer = shap.TreeExplainer(model)
 # Calculate Shap values
 shap_values = explainer.shap_values(data_for_prediction)
 
-display(shap.force_plot(explainer.expected_value[11], shap_values[11], data_for_prediction, link='logit'))
+display(shap.force_plot(explainer.expected_value[4], shap_values[4], data_for_prediction, link='logit')) """
 
+shap_values = shap.TreeExplainer(model).shap_values(X)
+shap.summary_plot(shap_values, X)
 
-# ===============================
+########## Finish Script ##########
 print("Success")
 print("--- %s seconds ---" % (time.time() - start_time))
