@@ -166,12 +166,17 @@ for i in crimes:
     heat_data = [[row['Latitude'],row['Longitude']] for index, row in heat_df.iterrows()]
     # Plot it on the map
     heatmap_base.add_child(plugins.HeatMap(heat_data, radius=15))
-    # Display the map
-    display(heatmap_base)
+    # Display the map display(heatmap_base)
     print()
 
 ##########################################
-data['Hour'] = data['Time1 of Occurrence'].dt.hour
+data['Time for Hour'] = data['Time1 of Occurrence'].copy()
+data['Hour'] = data['Time for Hour'].dt.hour
+data['Time for Min'] = data['Time1 of Occurrence'].copy()
+data['Minute'] = data['Time for Min'].dt.minute
+data['Time for Mon'] = data['Date'].copy()
+data['Month'] = data['Time for Mon'].dt.month
+
 data3 = data.groupby(['Hour', 'Date', 'NIBRS Crime Category'], as_index=False).count().iloc[:,:4]
 data3.rename(columns={'Incident Number w/year': 'Incidents'}, inplace=True)
 data3 = data3.groupby(['Hour', 'NIBRS Crime Category'], as_index=False).mean()
@@ -187,8 +192,8 @@ fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.show()
 
 ### Machine Learning Time ###
-# Drop unneeded columns
-newdata = data[['Hour','Division','NIBRS Crime Category','Year of Incident','Day1 of the Year','Watch','Beat','Latitude','Longitude']].copy()
+# Keep only needed columns
+newdata = data[['Month','Minute','Hour','Division','NIBRS Crime Category','Year of Incident','Day1 of the Year','Watch','Beat','Latitude','Longitude','Zip Code']].copy()
 newdata = newdata[newdata.Watch != 'U']
 newdata['Watch'].dropna(inplace=True)
 newdata['Watch'] = newdata['Watch'].astype(str).astype(int)
@@ -219,7 +224,7 @@ X_test = X_test.drop(['NIBRS Crime Category'], axis=1)
 
 le2 = LabelEncoder()
 y= le2.fit_transform(train['NIBRS Crime Category'])
-# Need key for later reference
+# Need key for later reference - Note: These are listed alphabetically.
 print(dict(zip(le2.classes_,range(len(le2.classes_)))))
 
 
@@ -229,7 +234,6 @@ X_train, X_valid, y_train, y_valid = train_test_split(X, y, random_state=1)
 model = LGBMClassifier() 
 
 # Train the model
-train_data = lgbm.Dataset(X,label=y, categorical_feature=['Division'])
 model.fit(X_train,y_train)
 preds_valid = model.predict(X_valid)
 
@@ -250,6 +254,8 @@ from sklearn.metrics import accuracy_score
 accuracy=accuracy_score(y_pred, y_valid)
 print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(y_valid, y_pred)))
 
+model = LGBMClassifier().fit(X, y, categorical_feature=['Division'])
+
 pdp_Pd = pdp.pdp_isolate(
     model=model,
     dataset=X,
@@ -264,7 +270,7 @@ pdp.pdp_plot(
 plt.show()
 
 
-model = LGBMClassifier().fit(X_valid, y_valid, categorical_feature=['Division'])
+
 # Test it out
 data_for_prediction = X_test.loc[[96623]]
 print(data_for_prediction)
@@ -277,7 +283,7 @@ explainer = shap.TreeExplainer(model)
 # Calculate Shap values
 shap_values = explainer.shap_values(data_for_prediction)
 
-shap.force_plot(explainer.expected_value[6], shap_values[6], data_for_prediction, link='logit')
+shap.force_plot(explainer.expected_value[6], shap_values[5], data_for_prediction, link='logit')
 
 
 # ===============================
