@@ -9,6 +9,7 @@ Austin Caudill
 import time
 start_time = time.time()
 
+import lux
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -267,8 +268,8 @@ plt.show()
 ########## Select Crime Category Feature Dependence ##########
 # "The SHAP values do not identify causality, which is better identified by experimental design or similar approaches."
 
-""" shap_values = shap.TreeExplainer(model).shap_values(X)
-shap.summary_plot(shap_values, X) """
+shap_values = shap.TreeExplainer(model).shap_values(X)
+shap.summary_plot(shap_values, X)
 
 ########## Finish Script ##########
 print("Success")
