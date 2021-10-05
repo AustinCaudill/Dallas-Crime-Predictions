@@ -267,9 +267,9 @@ plt.show()
 
 ########## Select Crime Category Feature Dependence ##########
 # "The SHAP values do not identify causality, which is better identified by experimental design or similar approaches."
-
-shap_values = shap.TreeExplainer(model).shap_values(X)
-shap.summary_plot(shap_values, X)
+# I'm not sure the class names are correct
+shap_values = shap.TreeExplainer(model2).shap_values(X)
+shap.summary_plot(shap_values, X, feature_names = X.columns, class_names= crimes)
 
 ########## Finish Script ##########
 print("Success")
