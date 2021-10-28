@@ -1,15 +1,15 @@
 """ 
 Dallas Crime Predictions
-Sept 30th 2021
+Oct 28th 2021
 Austin Caudill
 
 """
+
 ########## Begin Imports ##########
 # Begin Timer for script
 import time
 start_time = time.time()
 
-import lux
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
