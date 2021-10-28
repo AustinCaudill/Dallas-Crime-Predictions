@@ -10,3 +10,4 @@ https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7
 
 Due to file size, this CSV has been archived and made available for download at the following location:
 https://www.datascience.thepetroguy.com/public/Police_Incidents.csv
+Please be courteous of my server resources and prevent excessive downloading of this file.
