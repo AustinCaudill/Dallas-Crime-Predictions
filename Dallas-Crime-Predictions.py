@@ -42,8 +42,8 @@ data.rename(columns={'Year1 of Occurrence': 'Year'}, inplace=True)
 data = data[data.Year >= "2015"]
 
 # Check to ensure records were removed.
-#print('First date: ', str(data.Date.describe(datetime_is_numeric=True)['min']))
-#print('Last date: ', str(data.Date.describe(datetime_is_numeric=True)['max']))
+print('First date: ', str(data.Date.describe(datetime_is_numeric=True)['min']))
+print('Last date: ', str(data.Date.describe(datetime_is_numeric=True)['max']))
 
 # Check for duplicate records.
 print('Number of duplicate records: %s'  % (data['Incident Number w/year'].duplicated().sum()))  # Someday should convert to ftsring format.
